@@ -1,83 +1,48 @@
 #!/bin/bash
-#=========================================================
 # backup_and_restore.sh
-# A simple script to backup and restore files or directories
+# A simple backup and restore utility for Linux systems.
 # Author: Angel Pomales
 # Date: 2025-08-09
-#=========================================================
 
-# Variables
-BACKUP_DIR="/var/backups"
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+# ===== Configuration =====
+BACKUP_DIR="$HOME/backups"
+RESTORE_DIR="$HOME/restore"
+TIMESTAMP=$(date +%F_%H-%M-%S)
 
-# Functions
-usage() {
-    echo "Usage:"
-    echo "  $0 backup <source_path>"
-    echo "  $0 restore <backup_file> <destination_path>"
-    echo ""
-    echo "Examples:"
-    echo "  $0 backup /etc"
-    echo "  $0 restore /var/backups/etc_20250809_101530.tar.gz /etc"
-    exit 1
-}
-
-backup() {
-    local source_path=$1
-
-    if [ ! -d "$source_path" ] && [ ! -f "$source_path" ]; then
-        echo "Error: Source path does not exist."
+# ===== Functions =====
+backup_files() {
+    read -p "Enter the directory to back up: " SRC_DIR
+    if [ ! -d "$SRC_DIR" ]; then
+        echo "Error: Source directory does not exist."
         exit 1
     fi
 
     mkdir -p "$BACKUP_DIR"
-    local backup_file="$BACKUP_DIR/$(basename "$source_path")_${TIMESTAMP}.tar.gz"
-
-    tar -czf "$backup_file" -C "$(dirname "$source_path")" "$(basename "$source_path")"
-    if [ $? -eq 0 ]; then
-        echo "✅ Backup successful: $backup_file"
-    else
-        echo "❌ Backup failed."
-        exit 1
-    fi
+    BACKUP_FILE="$BACKUP_DIR/backup_$TIMESTAMP.tar.gz"
+    tar -czf "$BACKUP_FILE" -C "$SRC_DIR" .
+    echo "Backup completed: $BACKUP_FILE"
 }
 
-restore() {
-    local backup_file=$1
-    local destination_path=$2
-
-    if [ ! -f "$backup_file" ]; then
-        echo "Error: Backup file does not exist."
+restore_files() {
+    read -p "Enter the backup file to restore: " BACKUP_FILE
+    if [ ! -f "$BACKUP_FILE" ]; then
+        echo "Error: Backup file not found."
         exit 1
     fi
 
-    mkdir -p "$destination_path"
-    tar -xzf "$backup_file" -C "$destination_path" --strip-components=1
-    if [ $? -eq 0 ]; then
-        echo "✅ Restore successful to: $destination_path"
-    else
-        echo "❌ Restore failed."
-        exit 1
-    fi
+    mkdir -p "$RESTORE_DIR"
+    tar -xzf "$BACKUP_FILE" -C "$RESTORE_DIR"
+    echo "Restore completed to: $RESTORE_DIR"
 }
 
-# Main Script
-if [ $# -lt 2 ]; then
-    usage
-fi
+# ===== Menu =====
+echo "=== Backup & Restore Utility ==="
+echo "1) Backup files"
+echo "2) Restore files"
+read -p "Select an option [1-2]: " OPTION
 
-case $1 in
-    backup)
-        backup "$2"
-        ;;
-    restore)
-        if [ $# -ne 3 ]; then
-            usage
-        fi
-        restore "$2" "$3"
-        ;;
-    *)
-        usage
-        ;;
+case $OPTION in
+    1) backup_files ;;
+    2) restore_files ;;
+    *) echo "Invalid option." ;;
 esac
-
